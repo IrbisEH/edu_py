@@ -4,6 +4,7 @@ import random
 МЕТОДЫ ПЕРЕГРУЗКИ ОПЕРАЦИЙ
 (overloading operators)
 примеры основных операций
+! указаны не все контексты !
 """
 
 # операция инициализации экземпляра
@@ -112,19 +113,40 @@ class TestGetItem(TestClass):
             return TestGetItem()
         return idx
 
-# операции присваивания по индексу, в том числе нарезания (slice)
+# операции индексирования, в том числе нарезания (slice)
+class TestGetItemDict(TestClass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dict = {str(random.randint(0, 100)): self.value for _ in range(self.value)}
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            idx = str(idx)
+
+        if isinstance(idx, str):
+            if idx in self._dict:
+                return TestGetItemDict(value=self._dict[idx])
+            return TestGetItemDict()
+        return idx
+
+# операции присваивания по индексу или ключу, в том числе нарезания (slice)
+# например obj[1:3] = [10, 20]
+class TestSetItem(TestGetItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, idx, value):
+        if isinstance(idx, int):
+            self._list[idx] = value
+
+    def __str__(self):
+        return str(self._list)
+
 class TestDelItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def __delitem__(self):
-        pass
-
-class TestSetItem(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __setitem__(self):
         pass
 
 class TestLen(TestClass):
@@ -348,11 +370,19 @@ def test_getitem_3():
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
-def test_delitem():
-    pass
+def test_getitem_dict():
+    n = TestGetItemDict(value=5)
+    r = n[random.choice(list(n._dict.keys()))]
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_setitem():
+    r = TestSetItem(value=5)
+    r[3] = 'test'
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
+def test_delitem():
     pass
 
 @handler
@@ -447,8 +477,9 @@ if __name__ == '__main__':
     test_getitem()
     test_getitem_2()
     test_getitem_3()
+    test_getitem_dict()
+    test_setitem()
     #test_delitem()
-    #test_setitem()
     #test_len()
     #test_bool()
     #test_lt()
