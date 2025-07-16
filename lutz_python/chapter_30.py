@@ -1,3 +1,5 @@
+import random
+
 """
 МЕТОДЫ ПЕРЕГРУЗКИ ОПЕРАЦИЙ
 (overloading operators)
@@ -8,6 +10,9 @@
 class TestClass:
     def __init__(self, value=None):
         self.value = value if value is not None else 0
+
+    def __str__(self):
+        return str(self.value)
 
 # операция сложения
 class TestAdd(TestClass):
@@ -93,13 +98,21 @@ class TestGetAttribute(TestClass):
     def __getattribute__(self):
         pass
 
+# операции индексирования, в том числе нарезания (slice)
 class TestGetItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._list = [random.randint(0, 100) for _ in range(self.value)]
 
-    def __getitem__(self):
-        pass
+    def __getitem__(self, idx):
+        # в случае, если метод вызывается нарезанием, то в аргумент приходит объект slice
+        if isinstance(idx, int):
+            if idx < len(self._list):
+                return TestGetItem(value=self._list[idx])
+            return TestGetItem()
+        return idx
 
+# операции присваивания по индексу, в том числе нарезания (slice)
 class TestDelItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -262,25 +275,27 @@ def handler(func):
             print(f'{func.__name__} => {res}')
 
         except Exception as e:
-            print(f'{func.__name__} => {e}')
+            print(f'Error! {func.__name__} => {e}')
 
     return wrapper
 
 @handler
 def test_add():
     n = TestAdd(value=1)
-    y = n + 2
-    return f"Operation returned instance of '{y.__class__.__name__}'. Value: {y.value}"
+    r = n + 2
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r.value}"
 
 @handler
 def test_sub():
     n = TestSub(value=1)
-    y = n - 2
-    return f"Operation returned instance of '{y.__class__.__name__}'. Value: {y.value}"
+    r = n - 2
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r.value}"
 
 @handler
 def test_or():
-    pass
+    n = TestOr(value=1)
+    r = n | 2
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r.value}"
 
 @handler
 def test_del():
@@ -316,7 +331,21 @@ def test_getattribute():
 
 @handler
 def test_getitem():
-    pass
+    n = TestGetItem(value=5)
+    r = n[1]
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
+def test_getitem_2():
+    n = TestGetItem(value=3)
+    r = n[4]
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
+def test_getitem_3():
+    n = TestGetItem(value=5)
+    r = n[0:3:]
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_delitem():
@@ -406,8 +435,8 @@ def test_new():
 if __name__ == '__main__':
     test_add()
     test_sub()
+    test_or()
     # test_del()
-    # test_or()
     # test_repr()
     # test_str()
     # test_call()
@@ -415,7 +444,9 @@ if __name__ == '__main__':
     #test_setattr()
     #test_delattr()
     #test_getattribute()
-    #test_getitem()
+    test_getitem()
+    test_getitem_2()
+    test_getitem_3()
     #test_delitem()
     #test_setitem()
     #test_len()
