@@ -72,12 +72,22 @@ class TestCall(TestClass):
     def __call__(self):
         pass
 
+# перехватывает обращение к атрибуту в том случае если в дереве наследования не найден указанны атрибут
 class TestGetAttr(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.data = TestGetAttrData()
 
-    def __getattr__(self):
-        pass
+    def __getattr__(self, x):   # может послужить для делегирвания доступ к атрибутам другим объектам
+        if x == 'age':
+            return self.data.age
+        if x == 'name':
+            return self.data.name
+        raise AttributeError(x)
+
+class TestGetAttrData:
+    age = 40
+    name = "<NAME>"
 
 class TestSetAttr(TestClass):
     def __init__(self, *args, **kwargs):
@@ -232,12 +242,15 @@ class TestIter:
         self.value += 1
         return self.value ** 2
 
-class TestContains(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+# операция проверка членства in
+# Если не определен этот метод, то используется __iter__, или если и его нет, то __getitem__
+class TestContains:
+    def __init__(self, value):
+        self.value = value
 
-    def __contains__(self):
-        pass
+    def __contains__(self, x):
+        return x not in self.value
+
 # Позволяет объекту вести себя как целое число в некоторых операциях, т.е. Возвращает целое число
 # Например в индексации массивов или срезов, а так же в операциях bin hex и прочее
 class TestIndex(TestClass):
@@ -309,6 +322,16 @@ class TestIterator:
         self.offset += 1
         return item
 
+# еще один пример использования __iter__ с оператором yield, который сам по себе уже генератор
+# поддерживает множество активных итераторов
+class TestIterYield:
+    def __init__(self, start, stop):
+        self.start = start
+        self.stop = stop
+    def __iter__(self):     # когда вызывается __iter__ он, возвращает новый генератор.
+        for val in range(self.start, self.stop):
+            yield val
+
 def handler(func):
     def wrapper(*args, **kwargs):
         try:
@@ -356,7 +379,15 @@ def test_call():
 
 @handler
 def test_getattr():
-    pass
+    n = TestGetAttr(5)
+    r = f'{n.name}: {n.age} and {n.value}'
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
+def test_getattr_error():
+    n = TestGetAttr(5)
+    r = n.someattr
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_setattr():
@@ -470,12 +501,25 @@ def test_iter_multiply_list():
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
+def test_iter_yield():
+    n = TestIterYield(0, 5)
+    r = []
+    for i in n:
+        for y in n:
+            r.append(f'{i}{y}')
+    r = ' '.join(r)
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+
+@handler
 def test_next():
     pass
 
 @handler
 def test_contains():
-    pass
+    n = TestContains('abcd')
+    r = 'a' in n
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_index():
@@ -516,7 +560,8 @@ if __name__ == '__main__':
     # test_repr()
     # test_str()
     # test_call()
-    # test_getattr()
+    test_getattr()
+    test_getattr_error()
     #test_setattr()
     #test_delattr()
     #test_getattribute()
@@ -538,7 +583,8 @@ if __name__ == '__main__':
     test_iter()
     test_iter_multiply()
     test_iter_multiply_list()
-    #test_contains()
+    test_iter_yield()
+    test_contains()
     test_index()
     #test_enter()
     #test_exit()
