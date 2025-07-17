@@ -291,6 +291,23 @@ class TestNew(TestClass):
     def __new__(self):
         pass
 
+# пример перегрузки операции итерации с отдельным итератором и возможностью множественного прохода
+class TestIteration:
+    def __init__(self, arg):
+        self.arg = arg
+    def __iter__(self):
+        return TestIterator(self.arg)
+
+class TestIterator:
+    def __init__(self, arg):
+        self.arg = arg
+        self.offset = 0
+    def __next__(self):
+        if self.offset >= len(self.arg):
+            raise StopIteration
+        item = self.arg[self.offset]
+        self.offset += 1
+        return item
 
 def handler(func):
     def wrapper(*args, **kwargs):
@@ -432,6 +449,24 @@ def test_iter():
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
+def test_iter_multiply():
+    n = TestIteration('abcd')
+    r = []
+    for i in n:
+        for y in n:
+            r.append(f'{i}{y}')
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
+def test_iter_multiply_list():
+    n = TestIteration(['a', 'b', 'c', 'd'])
+    r = []
+    for i in n:
+        for y in n:
+            r.append(f'{i}{y}')
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
+
+@handler
 def test_next():
     pass
 
@@ -498,6 +533,8 @@ if __name__ == '__main__':
     #test_radd()
     #test_iadd()
     test_iter()
+    test_iter_multiply()
+    test_iter_multiply_list()
     #test_contains()
     test_index()
     #test_enter()
