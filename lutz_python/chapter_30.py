@@ -11,6 +11,7 @@ import random
 class TestClass:
     def __init__(self, value=None):
         self.value = value if value is not None else 0
+        self.list = [random.randint(0, 100) for _ in range(self.value)]
 
     def __str__(self):
         return str(self.value)
@@ -103,13 +104,12 @@ class TestGetAttribute(TestClass):
 class TestGetItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._list = [random.randint(0, 100) for _ in range(self.value)]
 
     def __getitem__(self, idx):
         # в случае, если метод вызывается нарезанием, то в аргумент приходит объект slice
         if isinstance(idx, int):
-            if idx < len(self._list):
-                return TestGetItem(value=self._list[idx])
+            if idx < len(self.list):
+                return TestGetItem(value=self.list[idx])
             return TestGetItem()
         return idx
 
@@ -131,16 +131,16 @@ class TestGetItemDict(TestClass):
 
 # операции присваивания по индексу или ключу, в том числе нарезания (slice)
 # например obj[1:3] = [10, 20]
-class TestSetItem(TestGetItem):
+class TestSetItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, idx, value):
         if isinstance(idx, int):
-            self._list[idx] = value
+            self.list[idx] = value
 
     def __str__(self):
-        return str(self._list)
+        return str(self.list)
 
 class TestDelItem(TestClass):
     def __init__(self, *args, **kwargs):
@@ -219,19 +219,18 @@ class TestIadd(TestClass):
     def __iadd__(self):
         pass
 
-class TestIter(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+# операции в контексте итерации
+class TestIter:
+    def __init__(self, start, stop):
+        self.value = start - 1
+        self.stop = stop
     def __iter__(self):
-        pass
-
-class TestNext(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+        return self
     def __next__(self):
-        pass
+        if self.value == self.stop:
+            raise StopIteration
+        self.value += 1
+        return self.value ** 2
 
 class TestContains(TestClass):
     def __init__(self, *args, **kwargs):
@@ -239,13 +238,16 @@ class TestContains(TestClass):
 
     def __contains__(self):
         pass
-
+# Позволяет объекту вести себя как целое число в некоторых операциях, т.е. Возвращает целое число
+# Например в индексации массивов или срезов, а так же в операциях bin hex и прочее
 class TestIndex(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __index__(self):
-        pass
+    def __index__(self) -> int:    # не принимает аргументы, возвращает int, иначе ошибка
+        # если операция индексация,
+        # используя этот объект в индекс будет падать 0, а значит первый элемент
+        return 0
 
 class TestEnter(TestClass):
     def __init__(self, *args, **kwargs):
@@ -423,7 +425,11 @@ def test_iadd():
 
 @handler
 def test_iter():
-    pass
+    n  = TestIter(0, 5)
+    r = ''
+    for i in n:     # for вызывает функцию iter, которая вызывает __iter__
+        r += f'{i} '    # каждая итерация вызывает __next__
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_next():
@@ -435,7 +441,9 @@ def test_contains():
 
 @handler
 def test_index():
-    pass
+    n = TestIndex(5)
+    r = n.list[n] # т.е. из списка проиндексировать и вернуть элемент по индексу, который вернул метод
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_enter():
@@ -489,10 +497,9 @@ if __name__ == '__main__':
     #test_ne()
     #test_radd()
     #test_iadd()
-    #test_iter()
-    #test_next()
+    test_iter()
     #test_contains()
-    #test_index()
+    test_index()
     #test_enter()
     #test_exit()
     #test_get()
