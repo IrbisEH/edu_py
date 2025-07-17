@@ -444,17 +444,19 @@ def test_iadd():
 def test_iter():
     n  = TestIter(0, 5)
     r = ''
-    for i in n:     # for вызывает функцию iter, которая вызывает __iter__
-        r += f'{i} '    # каждая итерация вызывает __next__
+    for i in n:     # в for попадает итератор, который на каждом проходе вызывает у него __next__
+        r += f'{i} '
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_iter_multiply():
-    n = TestIteration('abcd')
+    n = TestIteration('abcd')   # создается объект
     r = []
-    for i in n:
-        for y in n:
+    # for на каждом проходе вызывает у итератора метод __next__
+    for i in n:                 # в цикл отдается новый итератор с новым состоянием
+        for y in n:             # отдается еще один и тоже с новым состоянием
             r.append(f'{i}{y}')
+    r = ' '.join(r)
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
@@ -464,6 +466,7 @@ def test_iter_multiply_list():
     for i in n:
         for y in n:
             r.append(f'{i}{y}')
+    r = ' '.join(r)
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
