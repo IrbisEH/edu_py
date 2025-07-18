@@ -89,19 +89,29 @@ class TestGetAttrData:
     age = 40
     name = "<NAME>"
 
+# присваивание атрибуту класса значения
+# важно, что напрямую присваивание в самом методе __setatrr__ вызовет рекурсию и последующую ошибку переполнения стека
+# как выход - присвоить значение через атрибут __dict__
 class TestSetAttr(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __setattr__(self):
-        pass
+    def __setattr__(self, attr, value):
+        if attr in ('value', 'list'):
+            self.__dict__[attr] = value
+        else:
+            raise AttributeError(f'{attr} is not a valid attribute')
 
-class TestDelAttr(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+# операция удаление атрибута
+class TestDelAttr:
+    def __init__(self):
+        self.value = 10
 
-    def __delattr__(self):
-        pass
+    def __delattr__(self, attr):
+        if attr in ('value', 'list'):
+            del self.__dict__[attr]     # так же для избежания рекурсии, удаление происходит через __dict__
+        else:
+            raise AttributeError(f'{attr} is not a valid attribute')
 
 class TestGetAttribute(TestClass):
     def __init__(self, *args, **kwargs):
@@ -384,18 +394,16 @@ def test_getattr():
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
-def test_getattr_error():
-    n = TestGetAttr(5)
-    r = n.someattr
-    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
-
-@handler
 def test_setattr():
-    pass
+    n = TestSetAttr(5)
+    n.value = 2
+    return f"Operation returned instance of '{n.value.__class__.__name__}'. Value: {n.value}"
 
 @handler
 def test_delattr():
-    pass
+    n = TestDelAttr()
+    del n.value
+    return f"Operation returned instance of '{n.__dict__.__class__.__name__}'. Value: {n.__dict__}"
 
 @handler
 def test_getattribute():
@@ -561,9 +569,8 @@ if __name__ == '__main__':
     # test_str()
     # test_call()
     test_getattr()
-    test_getattr_error()
-    #test_setattr()
-    #test_delattr()
+    test_setattr()
+    test_delattr()
     #test_getattribute()
     test_getitem()
     test_getitem_2()
