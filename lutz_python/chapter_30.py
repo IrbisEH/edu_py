@@ -54,23 +54,23 @@ class TestRepr(TestClass):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        pass
+        return f'returned: {self.value}'
 
-# получение строкового представления
+# получение строкового представления (более специфичное чем repr, используется в print и str)
 class TestStr(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def __str__(self):
-        pass
+        return f'returned: {self.value}'
 
 # вызов экземпляра, позволяет экземпляру вести себя как функция
 class TestCall(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __call__(self):
-        pass
+    def __call__(self, other):
+        return self.value + other
 
 # перехватывает обращение к атрибуту в том случае если в дереве наследования не найден указанны атрибут
 class TestGetAttr(TestClass):
@@ -183,19 +183,21 @@ class TestBool(TestClass):
     def __bool__(self):
         pass
 
-class TestLt(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __lt__(self):
-        pass
-
+# операции сравнения: >
 class TestGt(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __gt__(self):
-        pass
+    def __gt__(self, other):
+        return self.value > other
+
+# операции сравнения: <
+class TestLt(TestClass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __lt__(self, other):
+        return self.value < other
 
 class TestLe(TestClass):
     def __init__(self, *args, **kwargs):
@@ -225,19 +227,21 @@ class TestNe(TestClass):
     def __ne__(self):
         pass
 
+# Операции правостороннего сложения. То есть когда класс стоит справа от оператора +
 class TestRadd(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __radd__(self):
-        pass
+    def __radd__(self, other):
+        return self.value + other
 
+# Операция сложения на месте. Например: x += 2
 class TestIadd(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __iadd__(self):
-        pass
+    def __iadd__(self, other):
+        return self.value + other
 
 # операции в контексте итерации
 class TestIter:
@@ -377,15 +381,20 @@ def test_del():
 
 @handler
 def test_repr():
-    pass
+    n = TestRepr(5)
+    n = repr(n)
+    return f"Operation returned instance of '{n.__class__.__name__}'. Value: {n}"
 
 @handler
 def test_str():
-    pass
+    n = TestStr(5)
+    return f"Operation returned instance of '{n.__class__.__name__}'. Value: {n}"
 
 @handler
 def test_call():
-    pass
+    n = TestCall(5)
+    r = n(2)
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_getattr():
@@ -452,12 +461,16 @@ def test_bool():
     pass
 
 @handler
-def test_lt():
-    pass
+def test_gt():
+    n = TestGt(5)
+    r = n > 3
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
-def test_gt():
-    pass
+def test_lt():
+    n = TestLt(5)
+    r = n < 3
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_ge():
@@ -473,11 +486,15 @@ def test_ne():
 
 @handler
 def test_radd():
-    pass
+    n = TestRadd(5)
+    r = 2 + n
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_iadd():
-    pass
+    n = TestIadd(5)
+    n += 2
+    return f"Operation returned instance of '{n.__class__.__name__}'. Value: {n}"
 
 @handler
 def test_iter():
@@ -565,9 +582,9 @@ if __name__ == '__main__':
     test_sub()
     test_or()
     # test_del()
-    # test_repr()
-    # test_str()
-    # test_call()
+    test_repr()
+    test_str()
+    test_call()
     test_getattr()
     test_setattr()
     test_delattr()
@@ -580,13 +597,13 @@ if __name__ == '__main__':
     #test_delitem()
     #test_len()
     #test_bool()
-    #test_lt()
-    #test_gt()
+    test_gt()
+    test_lt()
     #test_ge()
     #test_eq()
     #test_ne()
-    #test_radd()
-    #test_iadd()
+    test_radd()
+    test_iadd()
     test_iter()
     test_iter_multiply()
     test_iter_multiply_list()
