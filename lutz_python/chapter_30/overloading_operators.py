@@ -41,12 +41,14 @@ class TestOr(TestClass):
         return TestOr(self.value | value)
 
 # операция деструктуризации, уничтожения объекта
+# связан с некоторыми трудностями, так как не очевидно как будет работать сборщик мусора
+# Если в __del__ возникает исключение, оно будет проигнорировано, но появится предупреждение в stderr.
 class TestDel(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __del__(self, other):
-        pass
+    def __del__(self):
+        print(f'{self.__class__.__name__} => Удаление объект')
 
 # получение строкового представления
 class TestRepr(TestClass):
@@ -117,8 +119,10 @@ class TestGetAttribute(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __getattribute__(self):
-        pass
+    def __getattribute__(self, other):
+        cls_name = object.__getattribute__(self, '__class__').__name__
+        print(f'{cls_name} => Попытка доступа к атрибуту: {other}')
+        return super().__getattribute__(other)
 
 # операции индексирования, в том числе нарезания (slice)
 class TestGetItem(TestClass):
@@ -162,27 +166,33 @@ class TestSetItem(TestClass):
     def __str__(self):
         return str(self.list)
 
+# операция удаления по индексу
 class TestDelItem(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.list = [i for i in range(self.value)]
 
-    def __delitem__(self):
-        pass
+    def __delitem__(self, idx):
+        del self.list[idx]
 
-class TestLen(TestClass):
+# операции булевского контекста
+# сначала пытается полчить из __bool__, иначе пытается вывести значении
+# истинности из длинны объекта
+class TestBoolLen(TestClass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def __len__(self):
-        pass
-
-class TestBool(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        return 0
 
     def __bool__(self):
-        pass
+        return True
 
+
+# аналогичные операции сравнения:
+# lt gt
+# le ge
+# eq ne
 # операции сравнения: >
 class TestGt(TestClass):
     def __init__(self, *args, **kwargs):
@@ -198,34 +208,6 @@ class TestLt(TestClass):
 
     def __lt__(self, other):
         return self.value < other
-
-class TestLe(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __le__(self):
-        pass
-
-class TestGe(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __ge__(self):
-        pass
-
-class TestEq(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __eq__(self):
-        pass
-
-class TestNe(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __ne__(self):
-        pass
 
 # Операции правостороннего сложения. То есть когда класс стоит справа от оператора +
 class TestRadd(TestClass):
@@ -275,48 +257,6 @@ class TestIndex(TestClass):
         # если операция индексация,
         # используя этот объект в индекс будет падать 0, а значит первый элемент
         return 0
-
-class TestEnter(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __enter__(self):
-        pass
-
-class TestExit(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __exit__(self):
-        pass
-
-class TestGet(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __get__(self):
-        pass
-
-class TestSet(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __set__(self):
-        pass
-
-class TestDelete(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __delete__(self):
-        pass
-
-class TestNew(TestClass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __new__(self):
-        pass
 
 # пример перегрузки операции итерации с отдельным итератором и возможностью множественного прохода
 class TestIteration:
@@ -375,9 +315,9 @@ def test_or():
     r = n | 2
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r.value}"
 
-@handler
 def test_del():
-    pass
+    n = TestDel()
+    del n
 
 @handler
 def test_repr():
@@ -414,9 +354,8 @@ def test_delattr():
     del n.value
     return f"Operation returned instance of '{n.__dict__.__class__.__name__}'. Value: {n.__dict__}"
 
-@handler
 def test_getattribute():
-    pass
+    n = TestGetAttribute(5)
 
 @handler
 def test_getitem():
@@ -450,15 +389,21 @@ def test_setitem():
 
 @handler
 def test_delitem():
-    pass
+    n = TestDelItem(5)
+    del n[3]
+    return f"Operation returned instance of '{n.__class__.__name__}'. Value: {n.list}"
 
 @handler
 def test_len():
-    pass
+    n = TestBoolLen(5)
+    r = len(n)
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_bool():
-    pass
+    n = TestBoolLen(5)
+    r = bool(n)
+    return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
 @handler
 def test_gt():
@@ -471,18 +416,6 @@ def test_lt():
     n = TestLt(5)
     r = n < 3
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
-
-@handler
-def test_ge():
-    pass
-
-@handler
-def test_eq():
-    pass
-
-@handler
-def test_ne():
-    pass
 
 @handler
 def test_radd():
@@ -552,56 +485,29 @@ def test_index():
     r = n.list[n] # т.е. из списка проиндексировать и вернуть элемент по индексу, который вернул метод
     return f"Operation returned instance of '{r.__class__.__name__}'. Value: {r}"
 
-@handler
-def test_enter():
-    pass
-
-@handler
-def test_exit():
-    pass
-
-@handler
-def test_get():
-    pass
-
-@handler
-def test_set():
-    pass
-
-@handler
-def test_delete():
-    pass
-
-@handler
-def test_new():
-    pass
-
 
 if __name__ == '__main__':
     test_add()
     test_sub()
     test_or()
-    # test_del()
+    test_del()
     test_repr()
     test_str()
     test_call()
     test_getattr()
     test_setattr()
     test_delattr()
-    #test_getattribute()
+    test_getattribute()
     test_getitem()
     test_getitem_2()
     test_getitem_3()
     test_getitem_dict()
     test_setitem()
-    #test_delitem()
-    #test_len()
-    #test_bool()
+    test_delitem()
+    test_len()
+    test_bool()
     test_gt()
     test_lt()
-    #test_ge()
-    #test_eq()
-    #test_ne()
     test_radd()
     test_iadd()
     test_iter()
@@ -610,9 +516,3 @@ if __name__ == '__main__':
     test_iter_yield()
     test_contains()
     test_index()
-    #test_enter()
-    #test_exit()
-    #test_get()
-    #test_set()
-    #test_delete()
-    #test_new()
