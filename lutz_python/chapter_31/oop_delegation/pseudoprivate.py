@@ -16,6 +16,7 @@ class C2:
 class C3(C1, C2):
     pass
 
+
 if __name__ == '__main__':
     i = C3()
     i.meth1()
